@@ -5,9 +5,9 @@ authors = ["DK99 <kaleb.dk@gmail.com>"]
 edition = "2018"
 
 readme = "README.md"
-description = "Convert a heightmap to a stl file."
+description = "Convert a heightmap to stl triangles."
 license = "GPL-3.0"
-keywords = ["stl", "binary", "3d", "mesh", "heightmap", "image"]
+keywords = ["stl", "3d", "mesh", "heightmap", "image"]
 repository = "https://github.com/DK99/heightmap_to_stl"
 
 [lib]

@@ -30,24 +30,34 @@ fn main() {
         },
     };
 
-    let color_type = img.color();
-    if color_type != ColorType::L8 && color_type != ColorType::L16 {
-        e_red_ln!("image should be a Luma image!");
-        std::process::exit(1);
-    }
-    
     let (width, height) = img.dimensions();
 
     println!("Start generating heightmap");
     let mut heightmap = vec![vec! [0f32; height as usize]; width as usize];
 
-    //TODO Supoort luma 16
-    for (x, y, luma) in img.to_luma8().enumerate_pixels() {
-        let l = (*luma)[0] as f32 / 255.0;
-
-        let local_height = l * model_height;
-        heightmap[x as usize][y as usize] = local_height;
-    }
+    let color_type = img.color();
+    match color_type {
+        ColorType::L8 => {
+            for (x, y, luma) in img.to_luma8().enumerate_pixels() {
+                let l = (*luma)[0] as f32 / ((2i32).pow(8) as f32 - 1.0);
+        
+                let local_height = l * model_height;
+                heightmap[x as usize][y as usize] = local_height;
+            }
+        }
+        ColorType::L16 => {
+            for (x, y, luma) in img.to_luma16().enumerate_pixels() {
+                let l = (*luma)[0] as f32 / ((2i32).pow(16) as f32 - 1.0);
+        
+                let local_height = l * model_height;
+                heightmap[x as usize][y as usize] = local_height;
+            }
+        }
+        _ => {
+            e_red_ln!("image should be a Luma image!");
+            std::process::exit(1);
+        }
+    }    
 
     let mesh = heightmap_to_stl(heightmap, base_height);
 

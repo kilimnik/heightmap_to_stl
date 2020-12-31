@@ -1,0 +1,34 @@
+name: heightmap_to_stl
+version: "0.1.0"
+about: Generates an stl file from a greyscale image
+args:
+  - input:
+      short: i
+      long: input
+      value_name: input
+      help: Input greyscale image file path.
+      required: true
+      takes_value: true
+  - output:
+      short: o
+      long: output
+      value_name: output
+      help: Output stl file path.
+      required: true
+      takes_value: true
+  - base_height:
+      short: b
+      long: base
+      value_name: base_height
+      help: Height of the base, the model stands on.
+      required: true
+      takes_value: true
+      default_value: "5.0"
+  - model_height:
+      short: h
+      long: height
+      value_name: base_height
+      help: Z scale of the model. Height of the max elevation.
+      required: true
+      takes_value: true
+      default_value: "20.0"

@@ -1,0 +1,1 @@
+This is a rewrite of the great java [Heightmap2STL](https://sourceforge.net/projects/heightmap2stl/) project.

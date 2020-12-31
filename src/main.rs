@@ -2,7 +2,7 @@ use std::fs::OpenOptions;
 
 use clap::{App, ArgMatches, load_yaml};
 use colour::e_red_ln;
-use image::{GenericImageView, ColorType};
+use image::{ColorType, GenericImageView};
 use stl_io::{Normal, Triangle, Vertex, write_stl};
 
 fn main() {
@@ -39,7 +39,6 @@ fn main() {
     let (width, height) = img.dimensions();
 
     println!("Start generating heightmap");
-    let mut min_height = f32::MAX;
     let mut heightmap = vec![vec! [0f32; height as usize]; width as usize];
 
     //TODO Supoort luma 16
@@ -48,13 +47,22 @@ fn main() {
 
         let local_height = l * model_height;
         heightmap[x as usize][y as usize] = local_height;
-
-        if local_height < min_height {
-            min_height = local_height;
-        }
     }
 
-    let model_min_height = min_height - base_height;
+    let mesh = heightmap_to_stl(heightmap, base_height);
+
+    println!("Start writing to file");
+    let mut stl_file = OpenOptions::new().write(true).create(true).open(stl_file_name).unwrap();
+    write_stl(&mut stl_file, mesh.iter()).unwrap();
+}
+
+pub fn heightmap_to_stl(heightmap: Vec<Vec<f32>>, base_height: f32) -> Vec<Triangle> {
+    println!("Start generating mesh");
+
+    let width = heightmap.len();
+    let width_float = width as f32;
+    let height = heightmap[0].len();
+    let height_float = height as f32;    
 
     let default_vertex = Vertex::new([0.0, 0.0, 0.0]);
     let default_normal = Normal::new([0.0, 0.0, 0.0]);
@@ -62,15 +70,10 @@ fn main() {
         normal: default_normal,
         vertices: [default_vertex, default_vertex, default_vertex]
     };
-
-    println!("Start generating mesh");
-
-    let height_float = height as f32;
-    let height_usize = height as usize;
-    let width_float = width as f32;
-    let width_usize = width as usize;
-    let mut mesh = vec![default_triangle; calculate_triangle_count(width, height)];
+    let mut mesh = vec![default_triangle; calculate_triangle_count(width as u32, height as u32)];
     let mut mesh_index = 0;
+
+    let mut min_height = f32::MAX;
 
     // top surface
     for i in 0..(width - 1) {
@@ -93,8 +96,14 @@ fn main() {
 
             mesh[mesh_index] = create_triangle(vector_d, vector_e, vector_f, false);
             mesh_index += 1;
+
+            if heightmap[i][j] < min_height {
+                min_height = heightmap[i][j];
+            }
         }
     }
+
+    let model_min_height = min_height - base_height;
 
     //top base
     for i in 0..(width - 1) {
@@ -121,7 +130,7 @@ fn main() {
         let i_float = i as f32;
         let i_usize = i as usize;
         
-        let vector_a = [i_float,     height_float-1.0, heightmap[i_usize][height_usize-1]];
+        let vector_a = [i_float,     height_float-1.0, heightmap[i_usize][height-1]];
         let vector_b = [i_float+1.0, height_float-1.0, model_min_height];
         let vector_c = [i_float,     height_float-1.0, model_min_height];
 
@@ -129,8 +138,8 @@ fn main() {
         mesh_index += 1;
 
         let vector_d = [i_float+1.0, height_float-1.0, model_min_height];
-        let vector_e = [i_float,     height_float-1.0, heightmap[i_usize][height_usize-1]];
-        let vector_f = [i_float+1.0, height_float-1.0, heightmap[i_usize+1][height_usize-1]];
+        let vector_e = [i_float,     height_float-1.0, heightmap[i_usize][height-1]];
+        let vector_f = [i_float+1.0, height_float-1.0, heightmap[i_usize+1][height-1]];
 
         mesh[mesh_index] = create_triangle(vector_d, vector_e, vector_f, false);
         mesh_index += 1;
@@ -143,13 +152,13 @@ fn main() {
 
         let vector_a = [width_float-1.0, i_float,     model_min_height];
         let vector_b = [width_float-1.0, i_float+1.0, model_min_height];
-        let vector_c = [width_float-1.0, i_float,     heightmap[width_usize-1][i_usize]];
+        let vector_c = [width_float-1.0, i_float,     heightmap[width-1][i_usize]];
 
         mesh[mesh_index] = create_triangle(vector_a, vector_b, vector_c, false);
         mesh_index += 1;
 
-        let vector_d = [width_float-1.0, i_float+1.0, heightmap[width_usize-1][i_usize+1]];
-        let vector_e = [width_float-1.0, i_float,     heightmap[width_usize-1][i_usize+1]];
+        let vector_d = [width_float-1.0, i_float+1.0, heightmap[width-1][i_usize+1]];
+        let vector_e = [width_float-1.0, i_float,     heightmap[width-1][i_usize+1]];
         let vector_f = [width_float-1.0, i_float+1.0, model_min_height];
 
         mesh[mesh_index] = create_triangle(vector_d, vector_e, vector_f, false);
@@ -190,10 +199,7 @@ fn main() {
 
     mesh[mesh_index] = create_triangle(vector_d, vector_e, vector_f, false);
 
-
-    println!("Start writing to file");
-    let mut stl_file = OpenOptions::new().write(true).create(true).open(stl_file_name).unwrap();
-    write_stl(&mut stl_file, mesh.iter()).unwrap();
+    mesh
 }
 
 fn create_triangle(vector_a: [f32; 3], vector_b: [f32; 3], vector_c: [f32; 3], flip_normal: bool) -> Triangle {
